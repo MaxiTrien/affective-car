@@ -1,3 +1,5 @@
+import os 
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import cv2
 import numpy as np
 # from tensorflow import keras
@@ -34,19 +36,21 @@ emotion_window = []
 # starting video streaming
 
 cv2.namedWindow('window_frame')
-video_capture = cv2.VideoCapture(0)
+# video_capture = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(0)
 
 # Select video or webcam feed
-cap = None
-if (USE_WEBCAM == True):
-    cap = cv2.VideoCapture(0) # Webcam source
-else:
-    cap = cv2.VideoCapture('./demo/dinner.mp4') # Video file source
+# cap = None
+# if (USE_WEBCAM == True):
+#     cap = cv2.VideoCapture(0) # Webcam source
+# else:
+#     cap = cv2.VideoCapture('./demo/dinner.mp4') # Video file source
 
-while cap.isOpened(): # True:
+while(True):
+# while cap.isOpened(): # True:
     ret, bgr_image = cap.read()
 
-    #bgr_image = video_capture.read()[1]
+    # bgr_image = video_capture.read()[1]
 
     gray_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2GRAY)
     rgb_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2RGB)
