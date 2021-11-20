@@ -1,3 +1,5 @@
+import os 
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import cv2
 import numpy as np
 # from tensorflow import keras
@@ -11,8 +13,6 @@ from utils.inference import apply_offsets
 from utils.inference import load_detection_model
 from utils.preprocessor import preprocess_input
 from speech_feedback import feedback, FeedbackSentence
-import os
-import threading
 from multiprocessing import Process
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
@@ -44,17 +44,19 @@ emotion_window = []
 # starting video streaming
 
 cv2.namedWindow('window_frame')
-video_capture = cv2.VideoCapture(0)
+# video_capture = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(0)
 
 # Select video or webcam feed
-cap = None
-if (USE_WEBCAM == True):
-    cap = cv2.VideoCapture(0) # Webcam source
-else:
-    cap = cv2.VideoCapture('./demo/dinner.mp4') # Video file source
+# cap = None
+# if (USE_WEBCAM == True):
+#     cap = cv2.VideoCapture(0) # Webcam source
+# else:
+#     cap = cv2.VideoCapture('./demo/dinner.mp4') # Video file source
 
 emotion = None
-while cap.isOpened(): # True:
+# while cap.isOpened(): # True:
+while True:
     ret, bgr_image = cap.read()
 
     #bgr_image = video_capture.read()[1]
