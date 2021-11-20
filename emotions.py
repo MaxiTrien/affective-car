@@ -10,7 +10,7 @@ from utils.inference import draw_bounding_box
 from utils.inference import apply_offsets
 from utils.inference import load_detection_model
 from utils.preprocessor import preprocess_input
-from speech_feedback import feedback
+from speech_feedback import feedback, FeedbackSentence
 import os
 import threading
 from multiprocessing import Process
@@ -120,7 +120,9 @@ while cap.isOpened(): # True:
     if emotion == 'angry':
         img = mpimg.imread('warning.png')
         cv2.imshow('window_frame', img)
-        playsound("empathic.mp3", block='False')
+        feedback(FeedbackSentence.angry)
+    elif emotion == 'sad':
+        feedback(FeedbackSentence.sad)
     else:
         cv2.imshow('window_frame', bgr_image)
 
