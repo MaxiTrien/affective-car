@@ -22,7 +22,7 @@ def feedback(text):
     playsound(filename)
     os.remove(filename)
     
-    time.sleep(5)
+    time.sleep(2)
     
     
     

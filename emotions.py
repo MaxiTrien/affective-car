@@ -1,6 +1,7 @@
 import os 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import cv2
+import time 
 import numpy as np
 # from tensorflow import keras
 from tensorflow.keras.models import load_model
@@ -47,27 +48,17 @@ cv2.namedWindow('window_frame')
 cap = cv2.VideoCapture(0)
 
 # Overlay warning image on video
-warn_sign = cv2.imread('warning.png')
+warn_sign = cv2.imread('warning_2.png')
 warn_sign_size = 100
 warn_sign = cv2.resize(warn_sign, (warn_sign_size, warn_sign_size))
 # Mask for the warning sign
 img2gray = cv2.cvtColor(warn_sign, cv2.COLOR_BGR2GRAY)
 ret, mask = cv2.threshold(img2gray, 1, 255, cv2.THRESH_BINARY)
 
-
-# Select video or webcam feed
-# cap = None
-# if (USE_WEBCAM == True):
-#     cap = cv2.VideoCapture(0) # Webcam source
-# else:
-#     cap = cv2.VideoCapture('./demo/dinner.mp4') # Video file source
-
 emotion = None
-# while cap.isOpened(): # True:
+
 while True:
     ret, bgr_image = cap.read()
-
-    #bgr_image = video_capture.read()[1]
 
     gray_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2GRAY)
     rgb_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2RGB)
@@ -125,25 +116,24 @@ while True:
         draw_bounding_box(face_coordinates, rgb_image, color)
         draw_text(face_coordinates, rgb_image, emotion_mode,
                   color, 0, -45, 1, 1)
+        cv2.waitKey(10)
 
     bgr_image = cv2.cvtColor(rgb_image, cv2.COLOR_RGB2BGR)
-    
-    warn_frame = cv2.flip(bgr_image, 1)
-    roi = warn_frame[-warn_sign_size-10:-10, -warn_sign_size-10:-10]
-    roi[np.where(mask)] = 0
-    roi += warn_sign
 
     if emotion == 'angry':
-        # img = mpimg.imread('warning.png')
-        cv2.imshow('window_frame', warn_frame)
+        roi = bgr_image[-warn_sign_size-10:-10, -warn_sign_size-10:-10]
+        roi[np.where(mask)] = 0
+        roi += warn_sign
+        cv2.imshow('window_frame', bgr_image)
+        cv2.waitKey(1000)
         feedback(FeedbackSentence.angry)
-    #elif emotion == 'sad':
-    #    feedback(FeedbackSentence.sad)
+    elif emotion == 'sad':
+        feedback(FeedbackSentence.sad)
     else:
         cv2.imshow('window_frame', bgr_image)
 
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
-
+    
 cap.release()
 cv2.destroyAllWindows()
