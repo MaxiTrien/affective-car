@@ -42,9 +42,17 @@ emotion_target_size = emotion_classifier.input_shape[1:3]
 emotion_window = []
 
 # starting video streaming
-
 cv2.namedWindow('window_frame')
 video_capture = cv2.VideoCapture(0)
+
+# Overlay warning image on video
+warn_sign = cv2.imread('warning.png')
+warn_sign_size = 100
+warn_sign = cv2.resize(warn_sign, (warn_sign_size, warn_sign_size))
+# Mask for the warning sign
+img2gray = cv2.cvtColor(warn_sign, cv2.COLOR_BGR2GRAY)
+ret, mask = cv2.threshold(img2gray, 1, 255, cv2.THRESH_BINARY)
+
 
 # Select video or webcam feed
 cap = None
@@ -117,12 +125,18 @@ while cap.isOpened(): # True:
                   color, 0, -45, 1, 1)
 
     bgr_image = cv2.cvtColor(rgb_image, cv2.COLOR_RGB2BGR)
+    
+    warn_frame = cv2.flip(bgr_image, 1)
+    roi = warn_frame[-warn_sign_size-10:-10, -warn_sign_size-10:-10]
+    roi[np.where(mask)] = 0
+    roi += warn_sign
+
     if emotion == 'angry':
-        img = mpimg.imread('warning.png')
-        cv2.imshow('window_frame', img)
+        # img = mpimg.imread('warning.png')
+        cv2.imshow('window_frame', warn_frame)
         feedback(FeedbackSentence.angry)
-    elif emotion == 'sad':
-        feedback(FeedbackSentence.sad)
+    #elif emotion == 'sad':
+    #    feedback(FeedbackSentence.sad)
     else:
         cv2.imshow('window_frame', bgr_image)
 
