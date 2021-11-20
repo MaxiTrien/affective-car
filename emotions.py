@@ -1,7 +1,6 @@
-import os 
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import cv2
 import numpy as np
+# from tensorflow import keras
 from tensorflow.keras.models import load_model
 from statistics import mode
 from utils.datasets import get_labels
@@ -11,99 +10,122 @@ from utils.inference import draw_bounding_box
 from utils.inference import apply_offsets
 from utils.inference import load_detection_model
 from utils.preprocessor import preprocess_input
-from speech_feedback import feedback, FeedbackSentence
+from speech_feedback import feedback
+import os
+import threading
+from multiprocessing import Process
+import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
 
 
-def main():
-        
-    # parameters for loading data and images
-    emotion_model_path = './models/emotion_model.hdf5'
-    emotion_labels = get_labels('fer2013')
+from gtts import gTTS
+from playsound import playsound
 
-    # hyper-parameters for bounding boxes shape
-    frame_window = 10
-    emotion_offsets = (20, 40)
+USE_WEBCAM = True # If false, loads video file source
 
-    # loading models
-    face_cascade = cv2.CascadeClassifier('./models/haarcascade_frontalface_default.xml')
-    emotion_classifier = load_model(emotion_model_path)
+# parameters for loading data and images
+emotion_model_path = './models/emotion_model.hdf5'
+emotion_labels = get_labels('fer2013')
 
-    # getting input model shapes for inference
-    emotion_target_size = emotion_classifier.input_shape[1:3]
+# hyper-parameters for bounding boxes shape
+frame_window = 10
+emotion_offsets = (20, 40)
 
-    # starting lists for calculating modes
-    emotion_window = []
+# loading models
+face_cascade = cv2.CascadeClassifier('./models/haarcascade_frontalface_default.xml')
+emotion_classifier = load_model(emotion_model_path)
 
-    # starting video streaming
-    cap = cv2.VideoCapture(0)
-    cv2.namedWindow('window_frame')
+# getting input model shapes for inference
+emotion_target_size = emotion_classifier.input_shape[1:3]
 
-    while True: 
-        ret, bgr_image = cap.read()
+# starting lists for calculating modes
+emotion_window = []
 
-        gray_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2GRAY)
-        rgb_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2RGB)
+# starting video streaming
 
-        faces = face_cascade.detectMultiScale(gray_image, scaleFactor=1.1, minNeighbors=5,
-                minSize=(30, 30), flags=cv2.CASCADE_SCALE_IMAGE)
+cv2.namedWindow('window_frame')
+video_capture = cv2.VideoCapture(0)
 
-        for face_coordinates in faces:
+# Select video or webcam feed
+cap = None
+if (USE_WEBCAM == True):
+    cap = cv2.VideoCapture(0) # Webcam source
+else:
+    cap = cv2.VideoCapture('./demo/dinner.mp4') # Video file source
 
-            x1, x2, y1, y2 = apply_offsets(face_coordinates, emotion_offsets)
-            gray_face = gray_image[y1:y2, x1:x2]
-            try:
-                gray_face = cv2.resize(gray_face, (emotion_target_size))
-            except:
-                continue
+emotion = None
+while cap.isOpened(): # True:
+    ret, bgr_image = cap.read()
 
-            gray_face = preprocess_input(gray_face, True)
-            gray_face = np.expand_dims(gray_face, 0)
-            gray_face = np.expand_dims(gray_face, -1)
-            emotion_prediction = emotion_classifier.predict(gray_face)
-            emotion_probability = np.max(emotion_prediction)
-            emotion_label_arg = np.argmax(emotion_prediction)
-            emotion_text = emotion_labels[emotion_label_arg]
-            emotion_window.append(emotion_text)
+    #bgr_image = video_capture.read()[1]
 
-            if len(emotion_window) > frame_window:
-                emotion_window.pop(0)
-            try:
-                emotion_mode = mode(emotion_window)
-            except:
-                continue
+    gray_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2GRAY)
+    rgb_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2RGB)
 
-            if emotion_text == 'angry':
-                color = emotion_probability * np.asarray((255, 0, 0))
-            elif emotion_text == 'sad':
-                color = emotion_probability * np.asarray((0, 0, 255))
-            elif emotion_text == 'happy':
-                color = emotion_probability * np.asarray((255, 255, 0))
-            elif emotion_text == 'surprise':
-                color = emotion_probability * np.asarray((0, 255, 255))
-            else:
-                color = emotion_probability * np.asarray((0, 255, 0))
+    faces = face_cascade.detectMultiScale(gray_image, scaleFactor=1.1, minNeighbors=5,
+			minSize=(30, 30), flags=cv2.CASCADE_SCALE_IMAGE)
 
-            color = color.astype(int)
-            color = color.tolist()
+    for face_coordinates in faces:
 
-            draw_bounding_box(face_coordinates, rgb_image, color)
-            draw_text(face_coordinates, rgb_image, emotion_mode,
-                    color, 0, -45, 1, 1)
+        x1, x2, y1, y2 = apply_offsets(face_coordinates, emotion_offsets)
+        gray_face = gray_image[y1:y2, x1:x2]
+        try:
+            gray_face = cv2.resize(gray_face, (emotion_target_size))
+        except:
+            continue
 
-        bgr_image = cv2.cvtColor(rgb_image, cv2.COLOR_RGB2BGR)
-        cv2.imshow('window_frame', bgr_image)
-        
+        gray_face = preprocess_input(gray_face, True)
+        gray_face = np.expand_dims(gray_face, 0)
+        gray_face = np.expand_dims(gray_face, -1)
+        emotion_prediction = emotion_classifier.predict(gray_face)
+        emotion_probability = np.max(emotion_prediction)
+        emotion_label_arg = np.argmax(emotion_prediction)
+        emotion_text = emotion_labels[emotion_label_arg]
+        emotion = emotion_text
+        emotion_window.append(emotion_text)
+
+        if len(emotion_window) > frame_window:
+            emotion_window.pop(0)
+        try:
+            emotion_mode = mode(emotion_window)
+        except:
+            continue
+
         if emotion_text == 'angry':
-            feedback(FeedbackSentence.angry)
+            color = emotion_probability * np.asarray((255, 0, 0))
+
+            # img = mpimg.imread('warning.png')
+            # cv2.imshow('window_frame', img)
+
+            # P = Process(name="playsound", target=feedback("ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha"))
+            # P.start()  # Inititialize Process
+            # playsound("empathic.mp3", block='False')
         elif emotion_text == 'sad':
-            feedback(FeedbackSentence.sad)
-        
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
+            color = emotion_probability * np.asarray((0, 0, 255))
+        elif emotion_text == 'happy':
+            color = emotion_probability * np.asarray((255, 255, 0))
+        elif emotion_text == 'surprise':
+            color = emotion_probability * np.asarray((0, 255, 255))
+        else:
+            color = emotion_probability * np.asarray((0, 255, 0))
 
-    cap.release()
-    cv2.destroyAllWindows()
-    
+        color = color.astype(int)
+        color = color.tolist()
 
-if __name__ == '__main__':
-   main()
+        draw_bounding_box(face_coordinates, rgb_image, color)
+        draw_text(face_coordinates, rgb_image, emotion_mode,
+                  color, 0, -45, 1, 1)
+
+    bgr_image = cv2.cvtColor(rgb_image, cv2.COLOR_RGB2BGR)
+    if emotion == 'angry':
+        img = mpimg.imread('warning.png')
+        cv2.imshow('window_frame', img)
+        playsound("empathic.mp3", block='False')
+    else:
+        cv2.imshow('window_frame', bgr_image)
+
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+cap.release()
+cv2.destroyAllWindows()
