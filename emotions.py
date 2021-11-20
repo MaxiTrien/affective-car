@@ -1,3 +1,5 @@
+import os 
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import cv2
 import numpy as np
 from tensorflow.keras.models import load_model
@@ -14,8 +16,6 @@ from speech_feedback import feedback, FeedbackSentence
 
 def main():
         
-    USE_WEBCAM = True # If false, loads video file source
-
     # parameters for loading data and images
     emotion_model_path = './models/emotion_model.hdf5'
     emotion_labels = get_labels('fer2013')
@@ -35,21 +35,11 @@ def main():
     emotion_window = []
 
     # starting video streaming
-
+    cap = cv2.VideoCapture(0)
     cv2.namedWindow('window_frame')
-    video_capture = cv2.VideoCapture(0, cv2.CAP_DSHOW)
 
-    # Select video or webcam feed
-    cap = None
-    if (USE_WEBCAM == True):
-        cap = cv2.VideoCapture(0, cv2.CAP_DSHOW) # Webcam source
-    else:
-        cap = cv2.VideoCapture('./demo/dinner.mp4') # Video file source
-
-    while cap.isOpened(): # True:
+    while True: 
         ret, bgr_image = cap.read()
-
-        #bgr_image = video_capture.read()[1]
 
         gray_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2GRAY)
         rgb_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2RGB)
@@ -111,8 +101,6 @@ def main():
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
-
-    cap.release()
     cv2.destroyAllWindows()
     
 
